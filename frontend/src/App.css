@@ -14,3 +14,49 @@
     transform-origin: top;
     animation: laptopia-scroll-line 1.8s ease-in-out infinite;
 }
+
+@keyframes laptopia-heading-in {
+    0% {
+        opacity: 0;
+        transform: translateY(28px);
+        clip-path: inset(0 0 100% 0);
+    }
+    60% {
+        opacity: 1;
+        clip-path: inset(0 0 0 0);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+        clip-path: inset(0 0 0 0);
+    }
+}
+
+@keyframes laptopia-sub-in {
+    0% {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    100% {
+        opacity: 0.8;
+        transform: translateY(0);
+    }
+}
+
+.laptopia-stage__heading {
+    animation: laptopia-heading-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    will-change: opacity, transform, clip-path;
+}
+
+.laptopia-stage__sub {
+    animation: laptopia-sub-in 0.7s 0.15s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .laptopia-stage__heading,
+    .laptopia-stage__sub,
+    .laptopia-scroll-line {
+        animation: none !important;
+    }
+}

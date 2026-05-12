@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "@/App.css";
 
 const VIDEO_URL =
@@ -29,10 +29,10 @@ function App() {
   const sectionRef = useRef(null);
   const videoRef = useRef(null);
   const rafRef = useRef(0);
-  const [progress, setProgress] = useState(0); // 0..1 over the whole section
+  const [progress, setProgress] = useState(0);
   const [scrolled, setScrolled] = useState(false);
 
-  // Smooth scroll-scrub video + section progress
+  // Scroll-scrub video + section progress
   useEffect(() => {
     const video = videoRef.current;
     const section = sectionRef.current;
@@ -78,26 +78,13 @@ function App() {
     };
   }, []);
 
-  // Map global progress to per-stage opacity with crossfade
-  const stageOpacity = (i) => {
-    const segments = STAGES.length;
-    const start = i / segments;
-    const end = (i + 1) / segments;
-    const fade = 0.5 / segments; // crossfade window
+  // Active stage index from progress (no overlap)
+  const activeIdx = useMemo(() => {
+    const i = Math.floor(progress * STAGES.length);
+    return Math.min(STAGES.length - 1, Math.max(0, i));
+  }, [progress]);
 
-    if (progress < start - fade) return 0;
-    if (progress > end + fade) return 0;
-
-    // Fade in
-    if (progress < start) {
-      return i === 0 ? 1 : (progress - (start - fade)) / fade;
-    }
-    // Fade out
-    if (progress > end) {
-      return i === segments - 1 ? 1 : 1 - (progress - end) / fade;
-    }
-    return 1;
-  };
+  const stage = STAGES[activeIdx];
 
   return (
     <main
@@ -110,66 +97,10 @@ function App() {
         className="sticky top-0 h-screen w-full overflow-hidden"
         data-testid="laptopia-hero-sticky"
       >
-        <div className="mx-auto flex h-full w-full max-w-7xl flex-col-reverse items-center justify-center gap-8 px-6 md:flex-row md:gap-12 md:px-12 lg:gap-16 lg:px-16">
-          {/* Left: Text stages */}
+        <div className="mx-auto flex h-full w-full max-w-7xl flex-col items-center justify-center gap-2 px-6 sm:gap-4 md:flex-row md:gap-12 md:px-12 lg:gap-16 lg:px-16">
+          {/* Video — first in DOM so it appears ABOVE the text on mobile */}
           <div
-            className="relative flex w-full flex-1 items-center justify-start md:h-[70vh]"
-            data-testid="laptopia-hero-text-col"
-          >
-            <div className="relative w-full max-w-xl">
-              {STAGES.map((s, i) => (
-                <div
-                  key={i}
-                  data-testid={`laptopia-stage-${i + 1}`}
-                  className="absolute inset-0 flex flex-col justify-center transition-opacity duration-300 ease-out will-change-[opacity,transform]"
-                  style={{
-                    opacity: stageOpacity(i),
-                    transform: `translateY(${(1 - stageOpacity(i)) * 12}px)`,
-                    color: "#002f70",
-                  }}
-                >
-                  <h1
-                    data-testid={`laptopia-stage-${i + 1}-heading`}
-                    className="text-3xl leading-[1.05] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl"
-                    style={{ fontFamily: '"Sanchez", serif' }}
-                  >
-                    {s.heading}
-                  </h1>
-                  <p
-                    data-testid={`laptopia-stage-${i + 1}-subheading`}
-                    className="mt-4 max-w-lg text-base leading-relaxed opacity-80 sm:text-lg md:mt-6 md:text-xl"
-                    style={{ fontFamily: '"Sanchez", serif' }}
-                  >
-                    {s.subheading}
-                  </p>
-                </div>
-              ))}
-              {/* Spacer to give the absolutely positioned stages a measured height */}
-              <div
-                aria-hidden
-                className="invisible"
-                style={{ fontFamily: '"Sanchez", serif' }}
-              >
-                <h1 className="text-3xl leading-[1.05] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-                  {STAGES.reduce(
-                    (acc, s) => (s.heading.length > acc.length ? s.heading : acc),
-                    "",
-                  )}
-                </h1>
-                <p className="mt-4 max-w-lg text-base leading-relaxed sm:text-lg md:mt-6 md:text-xl">
-                  {STAGES.reduce(
-                    (acc, s) =>
-                      s.subheading.length > acc.length ? s.subheading : acc,
-                    "",
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Video */}
-          <div
-            className="flex w-full flex-1 items-center justify-center"
+            className="order-1 flex w-full flex-none items-center justify-center md:order-2 md:flex-1"
             data-testid="laptopia-hero-video-col"
           >
             <video
@@ -179,23 +110,70 @@ function App() {
               muted
               playsInline
               preload="auto"
-              poster=""
-              className="block h-auto w-full max-h-[70vh] max-w-[560px] object-contain"
+              className="block h-auto w-full max-h-[42vh] max-w-[420px] object-contain md:max-h-[70vh] md:max-w-[560px]"
             />
           </div>
+
+          {/* Text */}
+          <div
+            className="order-2 -mt-2 flex w-full flex-none items-center justify-center md:order-1 md:mt-0 md:h-[70vh] md:flex-1 md:justify-start"
+            data-testid="laptopia-hero-text-col"
+          >
+            <div
+              key={activeIdx}
+              data-testid={`laptopia-stage-${activeIdx + 1}`}
+              className="laptopia-stage flex w-full max-w-xl flex-col items-center text-center md:items-start md:text-left"
+              style={{ color: "#002f70" }}
+            >
+              <h1
+                data-testid={`laptopia-stage-${activeIdx + 1}-heading`}
+                className="laptopia-stage__heading text-2xl leading-[1.1] tracking-tight sm:text-3xl md:text-5xl lg:text-6xl"
+                style={{ fontFamily: '"Sanchez", serif' }}
+              >
+                {stage.heading}
+              </h1>
+              <p
+                data-testid={`laptopia-stage-${activeIdx + 1}-subheading`}
+                className="laptopia-stage__sub mt-3 max-w-lg text-sm leading-relaxed opacity-80 sm:text-base md:mt-6 md:text-xl"
+                style={{ fontFamily: '"Sanchez", serif' }}
+              >
+                {stage.subheading}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Stage indicator dots */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-6 flex justify-center gap-2 md:top-8"
+          data-testid="laptopia-stage-dots"
+        >
+          {STAGES.map((_, i) => (
+            <span
+              key={i}
+              className="block h-[3px] w-6 rounded-full transition-all duration-500"
+              style={{
+                background: "#002f70",
+                opacity: i === activeIdx ? 1 : 0.18,
+                transform: i === activeIdx ? "scaleX(1)" : "scaleX(0.7)",
+              }}
+            />
+          ))}
         </div>
 
         {/* Scroll hint */}
         <div
           data-testid="laptopia-scroll-hint"
-          className="pointer-events-none absolute inset-x-0 bottom-6 flex flex-col items-center gap-2 transition-opacity duration-500"
+          className="pointer-events-none absolute inset-x-0 bottom-5 flex flex-col items-center gap-2 transition-opacity duration-500 md:bottom-6"
           style={{
             color: "#002f70",
             opacity: scrolled ? 0 : 0.7,
             fontFamily: '"Sanchez", serif',
           }}
         >
-          <span className="text-xs tracking-[0.3em] uppercase">Skrolujte</span>
+          <span className="text-[10px] tracking-[0.3em] uppercase sm:text-xs">
+            Skrolujte
+          </span>
           <span className="relative block h-9 w-[1px] overflow-hidden">
             <span className="laptopia-scroll-line absolute inset-x-0 top-0 block h-full w-full bg-current" />
           </span>
