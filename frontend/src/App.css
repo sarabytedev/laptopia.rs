@@ -19,16 +19,12 @@
     0% {
         opacity: 0;
         transform: translateY(28px);
-        clip-path: inset(0 0 100% 0);
-    }
-    60% {
-        opacity: 1;
-        clip-path: inset(0 0 0 0);
+        filter: blur(6px);
     }
     100% {
         opacity: 1;
         transform: translateY(0);
-        clip-path: inset(0 0 0 0);
+        filter: blur(0);
     }
 }
 
@@ -45,7 +41,8 @@
 
 .laptopia-stage__heading {
     animation: laptopia-heading-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-    will-change: opacity, transform, clip-path;
+    will-change: opacity, transform, filter;
+    padding-bottom: 0.12em;
 }
 
 .laptopia-stage__sub {

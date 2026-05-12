@@ -143,24 +143,6 @@ function App() {
           </div>
         </div>
 
-        {/* Stage indicator dots */}
-        <div
-          className="pointer-events-none absolute inset-x-0 top-6 flex justify-center gap-2 md:top-8"
-          data-testid="laptopia-stage-dots"
-        >
-          {STAGES.map((_, i) => (
-            <span
-              key={i}
-              className="block h-[3px] w-6 rounded-full transition-all duration-500"
-              style={{
-                background: "#002f70",
-                opacity: i === activeIdx ? 1 : 0.18,
-                transform: i === activeIdx ? "scaleX(1)" : "scaleX(0.7)",
-              }}
-            />
-          ))}
-        </div>
-
         {/* Scroll hint */}
         <div
           data-testid="laptopia-scroll-hint"
