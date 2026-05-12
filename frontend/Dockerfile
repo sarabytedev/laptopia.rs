@@ -1,44 +1,23 @@
-# ---------- Stage 1: build ----------
-FROM node:20-alpine AS build
+# Frontend deploy = SAMO nginx koji serve-uje pre-built statičke fajlove.
+# Build (yarn install + yarn build) radi se LOKALNO na dev mašini pre git push-a,
+# jer mali VPS-ovi obore Webpack/CRA build (OOM, exit 255).
+#
+# Pre svakog push-a, sa dev mašine:
+#   cd frontend
+#   REACT_APP_BACKEND_URL=https://laptopia.rs yarn build
+#   git add build && git commit -m "build: frontend" && git push
 
-WORKDIR /app
-
-# Build-time arg (Coolify must mark REACT_APP_* as Build Variable)
-ARG REACT_APP_BACKEND_URL
-ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL \
-    CI=true \
-    GENERATE_SOURCEMAP=false \
-    DISABLE_ESLINT_PLUGIN=true \
-    NODE_OPTIONS=--max_old_space_size=2048
-
-# Alat za native node modules.
-RUN apk add --no-cache python3 make g++ git
-
-COPY package.json yarn.lock* ./
-
-# Smanjeni paralelizam radi stabilnosti na malim VPS-ovima.
-RUN if [ -f yarn.lock ]; then \
-        yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; \
-    else \
-        yarn install --network-timeout 600000 --network-concurrency 1; \
-    fi
-
-COPY . .
-
-RUN yarn build
-
-# ---------- Stage 2: serve ----------
 FROM nginx:1.27-alpine
 
 # SPA + /api proxy config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-COPY --from=build /app/build /usr/share/nginx/html
+# Pre-built statički sajt
+COPY build /usr/share/nginx/html
 
 EXPOSE 80
 
-# Healthcheck pogađa lokalni /healthz (nezavisan od backenda i SPA fallback-a).
-HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=5 \
     CMD wget -qO- http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

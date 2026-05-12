@@ -5,15 +5,50 @@ Spisak koraka za deploy aplikacije (FastAPI backend + React frontend + MongoDB) 
 ## 1. Lokalna priprema (već urađeno u repou)
 
 1. `backend/Dockerfile` — image za FastAPI (uvicorn, port 8001).
-2. `backend/requirements.prod.txt` — production deps **bez** `emergentintegrations` (private PyPI) i dev alata (pytest/black/mypy). Dockerfile koristi ovaj fajl.
+2. `backend/requirements.prod.txt` — production deps **bez** `emergentintegrations` (private PyPI) i dev alata. Dockerfile koristi ovaj fajl.
 3. `backend/.dockerignore` — isključuje `__pycache__`, `.env`, `venv`, testove.
-4. `frontend/Dockerfile` — multi-stage build (Node 20 build → nginx serve), port 80.
+4. `frontend/Dockerfile` — **single-stage nginx** koji serve-uje pre-built `frontend/build/`. Build se radi lokalno (vidi sekciju 2.0).
 5. `frontend/nginx.conf` — SPA fallback (`try_files ... /index.html`) + proxy `/api` na backend.
-6. `frontend/.dockerignore` — isključuje `node_modules`, `build`, `.env`.
+6. `frontend/.env.production` — `REACT_APP_BACKEND_URL=https://laptopia.rs` (commit-ovan, koristi se pri lokalnom `yarn build`-u).
 7. `docker-compose.yml` (root) — orkestracija servisa `backend`, `frontend`, `mongo` sa healthcheck-ovima i mrežom.
-8. `backend/.env.example` i `frontend/.env.example` — template promenljivih.
 
-> **Napomena o `requirements.txt`:** original `backend/requirements.txt` (sa `emergentintegrations==0.1.0`) ostaje za lokalni/Emergent dev. Production build koristi `requirements.prod.txt` jer `emergentintegrations` ne postoji na javnom PyPI (private index emergent.sh) i ruši build u Coolify-ju.
+> **Napomena o `requirements.txt`:** original `backend/requirements.txt` (sa `emergentintegrations==0.1.0`) ostaje za lokalni/Emergent dev. Production build koristi `requirements.prod.txt`.
+
+> **Napomena o frontend build-u:** CRA/webpack build je previše memory-hungry za male VPS-ove (1–2 GB RAM → `exit 255` / OOM). Zato **frontend gradiš LOKALNO**, commit-uješ `frontend/build/` i Coolify Dockerfile samo serve-uje statičke fajlove preko nginx-a.
+
+## 2.0. Lokalni frontend build (pre svakog push-a!)
+
+**Windows PowerShell (preporuka):**
+```powershell
+cd C:\Users\ninos\Documents\GitHub\laptopia.rs
+.\frontend\build.ps1
+git add frontend/build
+git commit -m "build: frontend $(Get-Date -Format yyyy-MM-dd)"
+git push origin main
+```
+
+Skripta `frontend/build.ps1` automatski koristi `npx yarn@1.22.22` (ne zahteva globalno instaliran yarn — dovoljno je da imaš Node.js).
+
+**Linux/macOS:**
+```bash
+cd frontend
+npx yarn install   # ili: yarn install ako je yarn instaliran globalno
+npx yarn build
+cd ..
+git add frontend/build
+git commit -m "build: frontend $(date +%Y-%m-%d)"
+git push origin main
+```
+
+**Ako nemaš `yarn` na Windows-u:** ne moraš da ga instaliraš — `npx yarn` ga preuzima na vreme. Alternative ako želiš trajno:
+```powershell
+corepack enable
+corepack prepare yarn@1.22.22 --activate
+# ili: npm install -g yarn
+```
+
+> Ako menjaš samo backend ili compose, ne moraš ponovo da gradiš frontend.
+> Coolify će preuzeti postojeći `frontend/build/` iz repoa.
 
 ## 2. Git push
 
@@ -248,23 +283,10 @@ U Coolify → Storage → dodaj volume:
 - Uzrok: paket je sa Emergent privatnog PyPI-ja, ne sa javnog.
 - Fix: `backend/Dockerfile` koristi `requirements.prod.txt` koji **ne** sadrži `emergentintegrations` ni dev alate.
 
-### B) Frontend build pada sa `exit code 255` (često OOM)
-- Uzrok: CRA + react-scripts + radix paketi tokom `yarn install` i `yarn build` lako pređu 1GB RAM-a. Na VPS-u sa <= 2GB to obara docker build.
-- Fix (već primenjen u `frontend/Dockerfile`):
-  - `NODE_OPTIONS=--max_old_space_size=2048`
-  - `GENERATE_SOURCEMAP=false`
-  - `DISABLE_ESLINT_PLUGIN=true`
-  - `yarn install --network-concurrency 1`
-  - Skidanje `@emergentbase/visual-edits` (tarball sa emergent.sh) iz `package.json` u build koraku — nije potreban za prod, a tarball ume da bude nedostupan iz VPS mreže.
-- Ako i dalje puca:
-  - Proveri RAM na VPS-u: `free -h`. Privremeno dodaj swap:
-    ```bash
-    sudo fallocate -l 2G /swapfile
-    sudo chmod 600 /swapfile
-    sudo mkswap /swapfile && sudo swapon /swapfile
-    echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-    ```
-  - Alternativa: build frontend lokalno (`yarn build`), commit-uj `frontend/build/` i izmeni Dockerfile da samo kopira `build/` u nginx (bez build stage-a).
+### B) Frontend build pada sa `exit code 255` (OOM)
+- Uzrok: CRA + react-scripts + radix paketi tokom `yarn build` (Webpack/Terser/Workbox) pređu 1.5–2 GB RAM-a. Na VPS-u sa ≤ 2 GB to obara Docker build.
+- **Rešenje (već primenjeno u repou):** local-build strategija — frontend gradiš na dev mašini, Coolify samo serve-uje pre-built `frontend/build/` preko nginx-a. Vidi sekciju **2.0** za workflow.
+- Ako želiš da vratiš in-Docker build (npr. ako kasnije nabaviš jači VPS), referentni multi-stage Dockerfile sa svim memory tuninzima čuva se u git istoriji pre commita "feat: local-build strategy".
 
 ### C) Mongo healthcheck `mongosh: command not found`
 - Stari `mongo:5` image nema `mongosh`. `mongo:7` ima. Compose koristi `mongo:7`.

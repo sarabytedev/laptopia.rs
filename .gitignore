@@ -26,6 +26,8 @@ next-env.d.ts
 *.tsbuildinfo
 
 # Production builds
+# NOTE: /build matches samo ROOT /build. frontend/build/ je commit-ovan
+# (Coolify deploy koristi pre-built artifact; vidi DEPLOY_STEPS.md sekcija 1.).
 /build
 dist/
 dist
@@ -84,6 +86,9 @@ android-sdk/-e
 .env
 .env.*
 *.env
+# Izuzetak: .env.production fajl za frontend (CRA build pickup, sadrži samo public REACT_APP_*).
+!frontend/.env.production
+!*.env.example
 credentials.json
 *.pem
 *.key

@@ -40,11 +40,11 @@ services:
       - laptopia
 
   frontend:
+    # Frontend Dockerfile samo serve-uje pre-built /build/ folder (yarn build se radi LOKALNO).
+    # Razlog: CRA/webpack build je memory-hungry → exit 255 (OOM) na malim VPS-ovima.
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        REACT_APP_BACKEND_URL: ${REACT_APP_BACKEND_URL:-https://laptopia.rs}
     restart: unless-stopped
     environment:
       # Coolify magic: izloži servis na laptopia.rs (port 80 unutar kontejnera).
