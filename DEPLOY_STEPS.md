@@ -145,7 +145,65 @@ curl -fsS https://api.laptopia.rs/api/
 # (FastAPI nema rutu na "/", samo "/api/").
 ```
 
-### 5.9. Force HTTPS i www → apex redirect
+### 5.9. SSL sertifikat — Mint.rs (custom) vs Coolify (Let's Encrypt)
+
+Domen `laptopia.rs` je registrovan kod **Mint.rs**, koji u svom panelu nudi SSL sertifikate (najčešće besplatni Let's Encrypt preko AutoSSL, ređe komercijalni). U Coolify setup-u imaš dve opcije:
+
+#### Opcija A — Coolify automatski izdaje Let's Encrypt (PREPORUKA)
+
+Najjednostavnije i besplatno; isti je tip sertifikata kao i većina Mint AutoSSL-ova.
+
+Preduslov: DNS već pokazuje na VPS (sekcije 5.4–5.5) i portovi 80/443 otvoreni na firewall-u.
+
+1. Coolify → Application → svaki servis koji ima domen (frontend, backend) → **Domains**.
+2. Domeni MORAJU biti unešeni kao `https://...` (ne `http://...`). Coolify to vidi kao signal da treba LE.
+3. Idi na **Servers → tvoj VPS → Proxy** i proveri da Traefik radi (`docker ps | grep traefik`).
+4. **Redeploy** ili **Restart Proxy**. Coolify pokreće `acme-challenge` na portu 80; LE izdaje sertifikat za 5–30 sekundi.
+5. Provera:
+   ```bash
+   curl -vI https://laptopia.rs 2>&1 | grep -iE "issuer|subject|expire"
+   # Mora pisati: issuer: ... Let's Encrypt ...
+   ```
+
+Ako AutoSSL kod Mint-a izdaje sertifikat za `laptopia.rs` na njegovom hostingu — to NE smeta i NE konfliktuje sa Coolify LE-om, jer su to dva odvojena izdavanja (Mint za njihov hosting, Coolify za tvoj VPS). DNS pokazuje na VPS → korisnici vide Coolify-jev sertifikat. Mint-ov sertifikat tu prosto nije u upotrebi.
+
+#### Opcija B — Uvezi Mint custom sertifikat u Coolify
+
+Ako želiš da **isti sertifikat** koji koristi Mint koristi i tvoj VPS (npr. plaćeni Wildcard ili EV sertifikat):
+
+1. U Mint.rs panelu (cPanel/Plesk/custom) izgeneriši ili preuzmi:
+   - `certificate.crt` (ili `fullchain.pem`) — javni sertifikat + intermediate
+   - `private.key` — privatni ključ
+   - (opciono) `ca-bundle.crt` — chain
+2. Coolify → **Server → tvoj VPS → Certificates** (ili Application → service → Domains → "Use custom certificate").
+3. Paste-uj:
+   - **Certificate**: sadržaj `fullchain.pem` (ili `crt` + `ca-bundle` ulančane)
+   - **Private Key**: sadržaj `private.key`
+4. Označi za koje domene važi (`laptopia.rs`, `*.laptopia.rs` ako je wildcard).
+5. U **Application → service → Domains** isključi automatski LE: `Generate Automatic SSL` → OFF (ili "Use Custom Certificate").
+6. **Restart Proxy**.
+7. Provera:
+   ```bash
+   curl -vI https://laptopia.rs 2>&1 | grep -i issuer
+   # Mora pisati Mint-ov CA (ili komercijalni izdavač, npr. Sectigo/DigiCert).
+   ```
+
+> **Napomena o renewal-u (Opcija B):** moraš ručno (ili automatizovano) povući novi sertifikat sa Mint-a pre isteka i replace-ovati u Coolify-ju. Let's Encrypt sertifikati ističu na 90 dana; auto-renewal radi samo Opcija A. Zato je Opcija A praktičnija.
+
+#### Opcija C — DNS-only kod Mint-a + sertifikat kod Coolify-ja (najčešće)
+
+Ovo je faktički ono što ti je sad pokrenuto: Mint je samo DNS host, sertifikat se izdaje na VPS-u preko Coolify-jevog LE. Ako vidiš "no certificate" u brauzeru:
+- DNS još uvek pokazuje na pogrešan IP (Mint hosting umesto VPS).
+- Coolify još nije završio ACME challenge — pogledaj logove proxy-ja u Coolify-ju.
+- Port 80 zatvoren → Let's Encrypt ne može da završi HTTP-01 challenge.
+
+```bash
+# Provera trenutnog izdavača:
+echo | openssl s_client -connect laptopia.rs:443 -servername laptopia.rs 2>/dev/null \
+  | openssl x509 -noout -issuer -subject -dates
+```
+
+### 5.10. Force HTTPS i www → apex redirect
 
 U Coolify domain config-u uključi:
 - **Force HTTPS** (HTTP → HTTPS 301).

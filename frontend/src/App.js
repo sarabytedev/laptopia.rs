@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "@/App.css";
 
-const VIDEO_URL =
-  "https://customer-assets.emergentagent.com/job_laptopia-hero/artifacts/emv0f1wo_dis_mac_vid1080.mp4";
+// Video se sada serve-uje iz /public foldera (frontend/public/hero.mp4).
+// Build kopira u /usr/share/nginx/html/hero.mp4 → dostupan kao /hero.mp4.
+const VIDEO_URL = "/hero.mp4";
+
+const PHONE_NUMBER_DISPLAY = "060 660 0868";
+const PHONE_NUMBER_TEL = "+381606600868";
 
 const STAGES = [
   {
@@ -24,6 +28,10 @@ const STAGES = [
     subheading: "Standard za IT podršku. Uskoro",
   },
 ];
+
+const LAST_STAGE_INDEX = STAGES.length - 1;
+
+const preventDefault = (e) => e.preventDefault();
 
 function App() {
   const sectionRef = useRef(null);
@@ -78,6 +86,18 @@ function App() {
     };
   }, []);
 
+  // Globalna prevent na desni klik nad videom (dodatno osiguranje uz onContextMenu prop).
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.addEventListener("contextmenu", preventDefault);
+    v.addEventListener("dragstart", preventDefault);
+    return () => {
+      v.removeEventListener("contextmenu", preventDefault);
+      v.removeEventListener("dragstart", preventDefault);
+    };
+  }, []);
+
   // Active stage index from progress (no overlap)
   const activeIdx = useMemo(() => {
     const i = Math.floor(progress * STAGES.length);
@@ -85,6 +105,7 @@ function App() {
   }, [progress]);
 
   const stage = STAGES[activeIdx];
+  const isLastStage = activeIdx === LAST_STAGE_INDEX;
 
   return (
     <main
@@ -110,7 +131,15 @@ function App() {
               muted
               playsInline
               preload="auto"
-              className="block h-auto w-full max-h-[42vh] max-w-[420px] object-contain md:max-h-[70vh] md:max-w-[560px]"
+              // Disable browser-level download/PiP UI affordances.
+              controlsList="nodownload noremoteplayback noplaybackrate"
+              disablePictureInPicture
+              disableRemotePlayback
+              // React-level handlers (uz globalne addEventListener iznad).
+              onContextMenu={preventDefault}
+              onDragStart={preventDefault}
+              className="block h-auto w-full max-h-[42vh] max-w-[420px] object-contain md:max-h-[70vh] md:max-w-[560px] select-none"
+              style={{ WebkitUserSelect: "none", userSelect: "none" }}
             />
           </div>
 
@@ -139,6 +168,37 @@ function App() {
               >
                 {stage.subheading}
               </p>
+
+              {/* CTA — vidljiv samo na poslednjem stage-u */}
+              {isLastStage && (
+                <a
+                  href={`tel:${PHONE_NUMBER_TEL}`}
+                  data-testid="laptopia-cta-call"
+                  aria-label={`Pozovite nas na broj ${PHONE_NUMBER_DISPLAY}`}
+                  className="laptopia-cta mt-6 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium tracking-wide transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98] sm:text-base md:mt-8 md:px-8 md:py-4"
+                  style={{
+                    backgroundColor: "#002f70",
+                    color: "#ffffff",
+                    fontFamily: '"Sanchez", serif',
+                    boxShadow: "0 8px 20px rgba(0, 47, 112, 0.25)",
+                  }}
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  Pozovite nas — {PHONE_NUMBER_DISPLAY}
+                </a>
+              )}
             </div>
           </div>
         </div>
