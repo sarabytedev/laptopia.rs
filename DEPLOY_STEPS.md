@@ -279,6 +279,66 @@ U Coolify → Storage → dodaj volume:
 - Fix: Coolify → Application → svaki servis ima **svoje** Domain polje. `laptopia.rs` i `www.laptopia.rs` MORAJU biti na servisu **`frontend`** (port 80). `api.laptopia.rs` ide na **`backend`** (port 8001).
 - Alternativa: već postavljene `SERVICE_FQDN_FRONTEND_80` i `SERVICE_FQDN_BACKEND_8001` u `docker-compose.yml` rade isti posao automatski — samo **Redeploy** posle commit-a.
 
+### H) "Not Secure" / unsecure domen u brauzeru (LE sertifikat nije izdat)
+
+Brauzer prikazuje "Not Secure" ili "Vaša veza nije privatna" → Traefik servira Coolify-jev **default self-signed** sertifikat umesto Let's Encrypt. Razlog je gotovo uvek to što ACME challenge nije uspeo dok je servis bio unhealthy (Traefik traži healthy backend pre izdavanja).
+
+Sada kad je frontend healthy, treba ponovo pokrenuti izdavanje:
+
+**Korak 1 — provera trenutnog stanja sertifikata:**
+```bash
+echo | openssl s_client -connect laptopia.rs:443 -servername laptopia.rs 2>/dev/null \
+  | openssl x509 -noout -issuer -subject -dates
+```
+Ako u `issuer` piše `TRAEFIK DEFAULT CERT` ili `Coolify` → LE nije izdao. Ako piše `Let's Encrypt` → sertifikat radi, problem je verovatno u tvom brauzer cache-u (hard reload Ctrl+Shift+R).
+
+**Korak 2 — Coolify UI:**
+1. Application → tab **Configuration** ili **General**.
+2. Za servis `frontend` u Domains listi: izbriši i ponovo dodaj `https://laptopia.rs` i `https://www.laptopia.rs` (ovo trigger-uje novo izdavanje).
+3. **Save → Restart Proxy** (Servers → tvoj VPS → Proxy → Restart) **ne** Redeploy aplikacije.
+
+**Korak 3 — proveri logove Traefik proxy-ja na VPS-u (SSH):**
+```bash
+docker logs coolify-proxy 2>&1 | grep -iE "acme|laptopia|certificate" | tail -50
+```
+Tipične greške:
+- `unable to generate a certificate ... 403` → port 80 blokiran (vidi Korak 4).
+- `urn:ietf:params:acme:error:rateLimited` → previše pokušaja u kratkom periodu (čekaj 1h).
+- `dns problem` → DNS još nije propagiran; vrati se na sekciju 5.5.
+- `CAA record check failed` → CAA zapis na DNS-u blokira `letsencrypt.org`.
+
+**Korak 4 — firewall portovi (kritično za ACME HTTP-01 challenge):**
+```bash
+sudo ufw status                    # mora pisati 80/tcp ALLOW i 443/tcp ALLOW
+sudo ss -tlnp | grep -E ':80|:443' # neko mora slušati (traefik)
+```
+Ako nije:
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw reload
+```
+
+**Korak 5 — force re-issue (ako sve gore izgleda OK):**
+Na VPS-u:
+```bash
+# Backup acme.json
+sudo cp /data/coolify/proxy/acme.json /data/coolify/proxy/acme.json.bak
+
+# Obriši zapis za laptopia.rs (ostavi ostatak):
+sudo nano /data/coolify/proxy/acme.json
+# pronađi i obriši objekat sa "domain":{"main":"laptopia.rs"...} u "letsencrypt".certificates
+
+# Restart proxy
+docker restart coolify-proxy
+```
+Sledeći zahtev će pokrenuti novo ACME izdavanje. Sačekaj ~30s i osveži brauzer.
+
+**Korak 6 — provera u brauzeru:**
+- Otvori `https://laptopia.rs` u **inkognito tab-u** (eliminiše cache).
+- Klikni na lokot pored URL-a → "Connection is secure" + "Issued by: Let's Encrypt".
+- Ako i dalje "Not Secure", proveri da li si pisao `http://laptopia.rs` (bez s) — Coolify mora imati uključen **Force HTTPS redirect** (sekcija 5.10).
+
 ### G) Frontend "Unhealthy state" / "no server available" iako je build prošao
 Često se javlja kombinacija jer Traefik **odbija da ruta** ka unhealthy kontejneru.
 

@@ -11,16 +11,12 @@ ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL \
     DISABLE_ESLINT_PLUGIN=true \
     NODE_OPTIONS=--max_old_space_size=2048
 
-# Alat za rezanje memorije/I/O i osnovne build alatke za native node modules.
+# Alat za native node modules.
 RUN apk add --no-cache python3 make g++ git
 
-# Kopiraj samo package.json (yarn.lock možda ne postoji u repou)
 COPY package.json yarn.lock* ./
 
-# Skini @emergentbase/visual-edits iz package.json (nedostupan tarball + nepotreban za prod build).
-RUN node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));if(p.devDependencies && p.devDependencies['@emergentbase/visual-edits']){delete p.devDependencies['@emergentbase/visual-edits'];}if(p.dependencies && p.dependencies['@emergentbase/visual-edits']){delete p.dependencies['@emergentbase/visual-edits'];}fs.writeFileSync('package.json',JSON.stringify(p,null,2));"
-
-# Smanjeni paralelizam da bi yarn install bio stabilniji na malim VPS-ovima.
+# Smanjeni paralelizam radi stabilnosti na malim VPS-ovima.
 RUN if [ -f yarn.lock ]; then \
         yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; \
     else \
@@ -28,9 +24,6 @@ RUN if [ -f yarn.lock ]; then \
     fi
 
 COPY . .
-
-# Reapply patch posle COPY . . (jer je tek sada povučen originalni package.json iz konteksta).
-RUN node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));if(p.devDependencies && p.devDependencies['@emergentbase/visual-edits']){delete p.devDependencies['@emergentbase/visual-edits'];}if(p.dependencies && p.dependencies['@emergentbase/visual-edits']){delete p.dependencies['@emergentbase/visual-edits'];}fs.writeFileSync('package.json',JSON.stringify(p,null,2));"
 
 RUN yarn build
 

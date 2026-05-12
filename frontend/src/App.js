@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "@/App.css";
 
 // Video se sada serve-uje iz /public foldera (frontend/public/hero.mp4).
-// Build kopira u /usr/share/nginx/html/hero.mp4 → dostupan kao /hero.mp4.
 const VIDEO_URL = "/hero.mp4";
 
 const PHONE_NUMBER_DISPLAY = "060 660 0868";
@@ -30,8 +29,6 @@ const STAGES = [
 ];
 
 const LAST_STAGE_INDEX = STAGES.length - 1;
-
-const preventDefault = (e) => e.preventDefault();
 
 function App() {
   const sectionRef = useRef(null);
@@ -86,15 +83,17 @@ function App() {
     };
   }, []);
 
-  // Globalna prevent na desni klik nad videom (dodatno osiguranje uz onContextMenu prop).
+  // Anti-download deterrent (bez uticaja na layout/scroll-scrub):
+  // contextmenu i dragstart se hvataju preko addEventListener u runtime-u.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    v.addEventListener("contextmenu", preventDefault);
-    v.addEventListener("dragstart", preventDefault);
+    const prevent = (e) => e.preventDefault();
+    v.addEventListener("contextmenu", prevent);
+    v.addEventListener("dragstart", prevent);
     return () => {
-      v.removeEventListener("contextmenu", preventDefault);
-      v.removeEventListener("dragstart", preventDefault);
+      v.removeEventListener("contextmenu", prevent);
+      v.removeEventListener("dragstart", prevent);
     };
   }, []);
 
@@ -131,15 +130,7 @@ function App() {
               muted
               playsInline
               preload="auto"
-              // Disable browser-level download/PiP UI affordances.
-              controlsList="nodownload noremoteplayback noplaybackrate"
-              disablePictureInPicture
-              disableRemotePlayback
-              // React-level handlers (uz globalne addEventListener iznad).
-              onContextMenu={preventDefault}
-              onDragStart={preventDefault}
-              className="block h-auto w-full max-h-[42vh] max-w-[420px] object-contain md:max-h-[70vh] md:max-w-[560px] select-none"
-              style={{ WebkitUserSelect: "none", userSelect: "none" }}
+              className="block h-auto w-full max-h-[42vh] max-w-[420px] object-contain md:max-h-[70vh] md:max-w-[560px]"
             />
           </div>
 
