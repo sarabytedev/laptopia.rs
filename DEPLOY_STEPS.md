@@ -221,6 +221,30 @@ U Coolify → Storage → dodaj volume:
 - Fix: Coolify → Application → svaki servis ima **svoje** Domain polje. `laptopia.rs` i `www.laptopia.rs` MORAJU biti na servisu **`frontend`** (port 80). `api.laptopia.rs` ide na **`backend`** (port 8001).
 - Alternativa: već postavljene `SERVICE_FQDN_FRONTEND_80` i `SERVICE_FQDN_BACKEND_8001` u `docker-compose.yml` rade isti posao automatski — samo **Redeploy** posle commit-a.
 
+### G) Frontend "Unhealthy state" / "no server available" iako je build prošao
+Često se javlja kombinacija jer Traefik **odbija da ruta** ka unhealthy kontejneru.
+
+Tipičan uzrok: nginx ne uspeva da starta zato što `proxy_pass http://backend:8001/api/` zahteva DNS resolve `backend` hostname-a pri startu, a backend kontejner u tom trenutku nije up (ili je Docker DNS još inicijalizovan).
+
+Fix (već primenjen u repou):
+1. `frontend/nginx.conf` koristi `resolver 127.0.0.11` (Docker internal DNS) + varijabilni `proxy_pass $api_backend$request_uri` → DNS resolve se odlaže do prvog `/api/` zahteva, nginx normalno starta i bez backenda.
+2. Dodato `location = /healthz { return 200 'ok'; }` — namenski endpoint, ne zavisi od backend-a niti od SPA fallback-a.
+3. `frontend/Dockerfile` HEALTHCHECK pogađa `http://127.0.0.1/healthz` (15s interval, 20s start_period, 5 retries).
+4. `docker-compose.yml`: frontend više **ne čeka** backend healthcheck (`depends_on: - backend` bez `condition`), tako da jedan health flap backenda ne ruši frontend.
+
+**Coolify UI provera healthcheck-a (per servis):**
+- Application → service → **Healthcheck** tab.
+- Ako je polje **Healthcheck Path** popunjeno (npr. `/`), promeni u `/healthz` za frontend i `/api/` za backend.
+- Ili ostavi prazno — Coolify će koristiti Docker `HEALTHCHECK` iz Dockerfile-a.
+
+**Brza ručna provera na VPS-u** (SSH do servera):
+```bash
+docker ps --filter "name=khlltb27wnls74azqi5sm6qs" --format "table {{.Names}}\t{{.Status}}"
+docker logs --tail 50 <frontend-container-id>
+docker exec <frontend-container-id> wget -qO- http://127.0.0.1/healthz
+docker exec <frontend-container-id> nginx -t
+```
+
 ### F) `api.laptopia.rs/` → `{"detail":"Not Found"}`
 - To **nije** greška. FastAPI nema rutu na `/`, samo na `/api/`.
 - Test: `curl https://api.laptopia.rs/api/` → mora vratiti `{"message":"Hello World"}`.

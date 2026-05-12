@@ -31,11 +31,11 @@ services:
     expose:
       - "8001"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8001/api/"]
-      interval: 30s
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/api/', timeout=3).status==200 else 1)\""]
+      interval: 15s
       timeout: 5s
-      retries: 3
-      start_period: 20s
+      retries: 5
+      start_period: 30s
     networks:
       - laptopia
 
@@ -49,17 +49,19 @@ services:
     environment:
       # Coolify magic: izloži servis na laptopia.rs (port 80 unutar kontejnera).
       SERVICE_FQDN_FRONTEND_80: ${SERVICE_FQDN_FRONTEND_80:-https://laptopia.rs}
+    # NAMERNO bez "depends_on" sa condition: service_healthy — frontend nginx mora
+    # da starta nezavisno (DNS resolver odlaže resolve backend-a do prvog /api/ zahteva).
+    # Ako bi čekao backend, a backend čeka mongo, i jedan health flap obara ceo stack.
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     expose:
       - "80"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1"]
-      interval: 30s
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 15s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 20s
     networks:
       - laptopia
 
