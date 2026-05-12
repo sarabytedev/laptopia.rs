@@ -27,7 +27,7 @@
     text-align: left;
     padding-left: clamp(1.5rem, 6vw, 6rem);
     padding-right: clamp(1.5rem, 6vw, 6rem);
-    color: rgba(0, 0, 0, 0.8);
+    color: #050030;
 }
 
 .laptopia-hero__title {
@@ -37,7 +37,7 @@
     line-height: 0.95;
     letter-spacing: -0.01em;
     margin: 0;
-    color: rgba(0, 0, 0, 0.8);
+    color: #050030;
 }
 
 .laptopia-hero__subtitle {
@@ -48,7 +48,7 @@
     line-height: 1.4;
     margin: 1.25rem 0 0 0;
     max-width: 36rem;
-    color: rgba(0, 0, 0, 0.8);
+    color: #050030;
 }
 
 @media (max-width: 640px) {

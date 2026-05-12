@@ -18,7 +18,7 @@ function App() {
       />
       <div className="laptopia-hero__content">
         <h1 className="laptopia-hero__title" data-testid="laptopia-hero-title">
-          Laptopia
+          Laptopia.rs
         </h1>
         <p
           className="laptopia-hero__subtitle"
