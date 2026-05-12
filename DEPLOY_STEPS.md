@@ -165,3 +165,35 @@ U Coolify → Storage → dodaj volume:
 1. Coolify → Backups → schedule za `mongo` volume (dnevno, retencija 7 dana).
 2. Coolify → Notifications → Discord/Email za failed deploy.
 3. Resource limits: za `mongo` servis postavi `mem_limit: 512m`.
+
+## 11. Troubleshooting build problema
+
+### A) Backend pip install pada (`emergentintegrations`)
+- Uzrok: paket je sa Emergent privatnog PyPI-ja, ne sa javnog.
+- Fix: `backend/Dockerfile` koristi `requirements.prod.txt` koji **ne** sadrži `emergentintegrations` ni dev alate.
+
+### B) Frontend build pada sa `exit code 255` (često OOM)
+- Uzrok: CRA + react-scripts + radix paketi tokom `yarn install` i `yarn build` lako pređu 1GB RAM-a. Na VPS-u sa <= 2GB to obara docker build.
+- Fix (već primenjen u `frontend/Dockerfile`):
+  - `NODE_OPTIONS=--max_old_space_size=2048`
+  - `GENERATE_SOURCEMAP=false`
+  - `DISABLE_ESLINT_PLUGIN=true`
+  - `yarn install --network-concurrency 1`
+  - Skidanje `@emergentbase/visual-edits` (tarball sa emergent.sh) iz `package.json` u build koraku — nije potreban za prod, a tarball ume da bude nedostupan iz VPS mreže.
+- Ako i dalje puca:
+  - Proveri RAM na VPS-u: `free -h`. Privremeno dodaj swap:
+    ```bash
+    sudo fallocate -l 2G /swapfile
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile && sudo swapon /swapfile
+    echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+    ```
+  - Alternativa: build frontend lokalno (`yarn build`), commit-uj `frontend/build/` i izmeni Dockerfile da samo kopira `build/` u nginx (bez build stage-a).
+
+### C) Mongo healthcheck `mongosh: command not found`
+- Stari `mongo:5` image nema `mongosh`. `mongo:7` ima. Compose koristi `mongo:7`.
+
+### D) Coolify ne može da povuče Let's Encrypt sertifikat
+- `dig +short laptopia.rs` mora vratiti IP VPS-a sa interneta.
+- CAA zapis sme da bude prazan ili `0 issue "letsencrypt.org"`.
+- Port 80 i 443 moraju biti otvoreni na firewall-u VPS-a (`ufw status`).
