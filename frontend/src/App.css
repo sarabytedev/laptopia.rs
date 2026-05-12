@@ -1,59 +1,16 @@
-.laptopia-hero {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    margin: 0;
-    padding: 0;
-}
-
-.laptopia-hero__video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 0;
-}
-
-.laptopia-hero__content {
-    position: relative;
-    z-index: 1;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    text-align: left;
-    padding-left: clamp(1.5rem, 6vw, 6rem);
-    padding-right: clamp(1.5rem, 6vw, 6rem);
-    color: #00204d;
-}
-
-.laptopia-hero__title {
-    font-family: "Fugaz One", cursive;
-    font-weight: 400;
-    font-size: clamp(3.5rem, 10vw, 8.5rem);
-    line-height: 0.95;
-    letter-spacing: -0.01em;
-    margin: 0;
-    color: #00204d;
-}
-
-.laptopia-hero__subtitle {
-    font-family: "Sanchez", serif;
-    font-weight: 400;
-    font-style: normal;
-    font-size: clamp(1rem, 1.6vw, 1.5rem);
-    line-height: 1.4;
-    margin: 1.25rem 0 0 0;
-    max-width: 36rem;
-    color: #00204d;
-}
-
-@media (max-width: 640px) {
-    .laptopia-hero__content {
-        padding-left: 1.5rem;
-        padding-right: 1.5rem;
+@keyframes laptopia-scroll-line {
+    0% {
+        transform: translateY(-100%);
     }
+    60% {
+        transform: translateY(0%);
+    }
+    100% {
+        transform: translateY(100%);
+    }
+}
+
+.laptopia-scroll-line {
+    transform-origin: top;
+    animation: laptopia-scroll-line 1.8s ease-in-out infinite;
 }
