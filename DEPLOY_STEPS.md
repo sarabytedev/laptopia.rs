@@ -117,17 +117,35 @@ Ako delegiraš `laptopia.rs` na Cloudflare name-servere:
 3. SSL/TLS mode: **Full (strict)**, ne "Flexible" (uzrokuje redirect petlju).
 4. Kod registrara `.rs` postavi Cloudflare NS umesto default-a (`*.ns.cloudflare.com`).
 
-### 5.7. Dodaj domene u Coolify
+### 5.7. Dodaj domene u Coolify (PER SERVIS)
 
-1. Coolify → Application → `frontend` servis → **Domains**.
-2. Dodaj:
+> **Bitno:** Kod Docker Compose deploya u Coolify-ju, domeni se vežu **za pojedinačan servis**, ne za celu aplikaciju. Ako vežeš `laptopia.rs` na ceo stack ili na backend, frontend ostaje neprivezan i dobijaš _"no server available"_.
+
+1. Coolify → Application → tab **Configuration → Services / Domains** (ili "Edit Compose" → per-service Domain polje).
+2. Za servis **`frontend`** (port `80`):
    - `https://laptopia.rs`
    - `https://www.laptopia.rs`
-3. (Opciono) za backend servis: `https://api.laptopia.rs` (port `8001`).
-4. **Save → Redeploy** (ili **Reload Proxy**) — Traefik automatski povlači Let's Encrypt sertifikat.
-5. U logovima proxy-ja ne sme da bude `acme: error` ili `unable to authorize`. Ako jeste — DNS još nije propagiran ili CAA blokira LE.
+3. Za servis **`backend`** (port `8001`):
+   - `https://api.laptopia.rs`
+4. Alternativa preko compose-a: već ubačeni `SERVICE_FQDN_FRONTEND_80` i `SERVICE_FQDN_BACKEND_8001` u `environment:` bloku — Coolify autodetect-uje i generiše Traefik labele.
+5. **Save → Redeploy** (ili **Reload Proxy**) — Traefik povlači Let's Encrypt sertifikat.
+6. U logovima proxy-ja ne sme da bude `acme: error` ili `unable to authorize`. Ako jeste — DNS još nije propagiran ili CAA blokira LE.
 
-### 5.8. Force HTTPS i www → apex redirect
+### 5.8. Brza provera mapiranja
+
+```bash
+# Frontend (mora HTML, ne "no server available"):
+curl -fsI https://laptopia.rs | head -5
+curl -fsI https://www.laptopia.rs | head -5
+
+# Backend (mora JSON sa "Hello World" na /api/, ne na /):
+curl -fsS https://api.laptopia.rs/api/
+
+# Ako api.laptopia.rs/ vraća {"detail":"Not Found"} — to je OK, znači backend radi
+# (FastAPI nema rutu na "/", samo "/api/").
+```
+
+### 5.9. Force HTTPS i www → apex redirect
 
 U Coolify domain config-u uključi:
 - **Force HTTPS** (HTTP → HTTPS 301).
@@ -197,3 +215,18 @@ U Coolify → Storage → dodaj volume:
 - `dig +short laptopia.rs` mora vratiti IP VPS-a sa interneta.
 - CAA zapis sme da bude prazan ili `0 issue "letsencrypt.org"`.
 - Port 80 i 443 moraju biti otvoreni na firewall-u VPS-a (`ufw status`).
+
+### E) `laptopia.rs → "no server available"` ali `api.laptopia.rs` radi
+- Uzrok: domeni su zakačeni samo na backend servis, frontend nije mapiran u Traefik-u.
+- Fix: Coolify → Application → svaki servis ima **svoje** Domain polje. `laptopia.rs` i `www.laptopia.rs` MORAJU biti na servisu **`frontend`** (port 80). `api.laptopia.rs` ide na **`backend`** (port 8001).
+- Alternativa: već postavljene `SERVICE_FQDN_FRONTEND_80` i `SERVICE_FQDN_BACKEND_8001` u `docker-compose.yml` rade isti posao automatski — samo **Redeploy** posle commit-a.
+
+### F) `api.laptopia.rs/` → `{"detail":"Not Found"}`
+- To **nije** greška. FastAPI nema rutu na `/`, samo na `/api/`.
+- Test: `curl https://api.laptopia.rs/api/` → mora vratiti `{"message":"Hello World"}`.
+- Ako želiš da i koren odgovara, dodaj u `backend/server.py`:
+  ```python
+  @app.get("/")
+  async def root():
+      return {"status": "ok"}
+  ```

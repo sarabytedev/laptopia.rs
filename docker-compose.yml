@@ -19,6 +19,9 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
+      # Coolify magic: izloži servis na api.laptopia.rs (port 8001 unutar kontejnera).
+      # Ako Coolify nije konfigurisao SERVICE_FQDN_BACKEND, fallback je hardkod ispod.
+      SERVICE_FQDN_BACKEND_8001: ${SERVICE_FQDN_BACKEND_8001:-https://api.laptopia.rs}
       MONGO_URL: ${MONGO_URL:-mongodb://mongo:27017}
       DB_NAME: ${DB_NAME:-laptopia}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://laptopia.rs,https://www.laptopia.rs}
@@ -43,10 +46,13 @@ services:
       args:
         REACT_APP_BACKEND_URL: ${REACT_APP_BACKEND_URL:-https://laptopia.rs}
     restart: unless-stopped
+    environment:
+      # Coolify magic: izloži servis na laptopia.rs (port 80 unutar kontejnera).
+      SERVICE_FQDN_FRONTEND_80: ${SERVICE_FQDN_FRONTEND_80:-https://laptopia.rs}
     depends_on:
       backend:
         condition: service_healthy
-    ports:
+    expose:
       - "80"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1"]
