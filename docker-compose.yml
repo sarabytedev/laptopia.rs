@@ -40,8 +40,8 @@ services:
       - laptopia
 
   frontend:
-    # Frontend Dockerfile samo serve-uje pre-built /build/ folder (yarn build se radi LOKALNO).
-    # Razlog: CRA/webpack build je memory-hungry → exit 255 (OOM) na malim VPS-ovima.
+    # Multi-stage Dockerfile sam radi yarn install + yarn build (node stage),
+    # pa kopira artefakte u nginx stage. Nema lokalnog build-a pre push-a.
     build:
       context: ./frontend
       dockerfile: Dockerfile

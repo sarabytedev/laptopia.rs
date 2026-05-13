@@ -26,9 +26,9 @@ next-env.d.ts
 *.tsbuildinfo
 
 # Production builds
-# NOTE: /build matches samo ROOT /build. frontend/build/ je commit-ovan
-# (Coolify deploy koristi pre-built artifact; vidi DEPLOY_STEPS.md sekcija 1.).
+# Multi-stage Docker build kompajlira frontend u kontejneru — build folder ne ide u git.
 /build
+frontend/build/
 dist/
 dist
 
