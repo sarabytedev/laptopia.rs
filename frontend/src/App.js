@@ -130,10 +130,8 @@ function App() {
               src={VIDEO_SRC}
               muted
               playsInline
-              preload="auto"
+              preload="metadata"
               disablePictureInPicture
-              disableRemotePlayback
-              controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
               className="block aspect-square w-full max-h-[42vh] max-w-[360px] object-contain md:max-h-[70vh] md:max-w-[560px]"
             />
           </div>
