@@ -57,3 +57,24 @@
         animation: none !important;
     }
 }
+
+/* Sakrij Chrome-ove "Document Picture-in-Picture" i media-session overlay
+   strelice/cast dugmiće koje neki Chrome buildovi i dalje renderuju iznad
+   <video> elementa uprkos disablePictureInPicture/disableRemotePlayback
+   atributima. Sve poznate shadow-DOM pseudo-elemente nuklearno gasimo. */
+video::-webkit-media-controls,
+video::-webkit-media-controls-enclosure,
+video::-webkit-media-controls-panel,
+video::-webkit-media-controls-overlay-play-button,
+video::-webkit-media-controls-overlay-enclosure,
+video::-webkit-media-controls-start-playback-button,
+video::-internal-media-controls-overlay-cast-button,
+video::-internal-media-controls-button-panel,
+video::-internal-media-controls-download-button {
+    display: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
