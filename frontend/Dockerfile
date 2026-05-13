@@ -1,19 +1,30 @@
-# Frontend deploy = SAMO nginx koji serve-uje pre-built statičke fajlove.
-# Build (yarn install + yarn build) radi se LOKALNO na dev mašini pre git push-a,
-# jer mali VPS-ovi obore Webpack/CRA build (OOM, exit 255).
+# Multi-stage build: Node image kompajlira React app, nginx image samo servira.
+# Build se sada radi u kontejneru (Coolify radi sve), ne lokalno pre push-a.
 #
-# Pre svakog push-a, sa dev mašine:
-#   cd frontend
-#   REACT_APP_BACKEND_URL=https://laptopia.rs yarn build
-#   git add build && git commit -m "build: frontend" && git push
+# Memory tuning: GENERATE_SOURCEMAP=false i max-old-space-size=1024 obaraju peak
+# RAM na ~700MB što staje na sve standardne VPS-ove.
 
+# ---------- Stage 1: build ----------
+FROM node:22-alpine AS build
+WORKDIR /app
+
+# Cache layer: zavisnosti se ne reinstaliraju ako se manifest nije menjao.
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --network-timeout 600000
+
+COPY . .
+
+ARG REACT_APP_BACKEND_URL=https://laptopia.rs
+ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
+ENV GENERATE_SOURCEMAP=false
+ENV NODE_OPTIONS=--max-old-space-size=1024
+RUN yarn build
+
+# ---------- Stage 2: nginx ----------
 FROM nginx:1.27-alpine
 
-# SPA + /api proxy config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Pre-built statički sajt
-COPY build /usr/share/nginx/html
+COPY --from=build /app/build /usr/share/nginx/html
 
 EXPOSE 80
 

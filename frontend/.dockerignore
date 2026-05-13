@@ -1,9 +1,9 @@
 # Docker context za frontend.
-# VAŽNO: build/ je NAMERNO uključen jer Dockerfile koristi pre-built artifact
-# (local-build strategija, vidi frontend/Dockerfile i DEPLOY_STEPS.md sekciju 2.0).
+# Sa multi-stage build-om, kontejner sam radi yarn install + yarn build.
+# Isključujemo SAMO ono što ne sme u image (lokalni artefakti, tajne).
 
 node_modules
-# build       <-- NE isključuj, treba u image-u
+build
 dist
 coverage
 .env
@@ -16,15 +16,5 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .cache
-src
-public
-plugins
-craco.config.js
-postcss.config.js
-tailwind.config.js
-jsconfig.json
-components.json
-package.json
-yarn.lock
 README.md
 build.ps1
