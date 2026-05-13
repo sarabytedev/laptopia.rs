@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "@/App.css";
 
-// Video se sada serve-uje iz /public foldera (frontend/public/hero.mp4).
-const VIDEO_URL = "/hero.mp4";
+// Video se serve-uje iz /public foldera.
+// HEVC s alfom (.mov) za Safari, VP9 s alfom (.webm) za Chrome/Firefox/Edge.
+const VIDEO_SRC_HEVC = "/hero.mov";
+const VIDEO_SRC_WEBM = "/hero.webm";
 
 const PHONE_NUMBER_DISPLAY = "060 660 0868";
 const PHONE_NUMBER_TEL = "+381606600868";
@@ -126,12 +128,14 @@ function App() {
             <video
               ref={videoRef}
               data-testid="laptopia-hero-video"
-              src={VIDEO_URL}
               muted
               playsInline
               preload="auto"
               className="block h-auto w-full max-h-[42vh] max-w-[420px] object-contain md:max-h-[70vh] md:max-w-[560px]"
-            />
+            >
+              <source src={VIDEO_SRC_WEBM} type="video/webm" />
+              <source src={VIDEO_SRC_HEVC} type='video/mp4; codecs="hvc1"' />
+            </video>
           </div>
 
           {/* Text */}
