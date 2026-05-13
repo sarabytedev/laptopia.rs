@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "@/App.css";
 
-// Video se serve-uje iz /public foldera.
-// HEVC s alfom (.mov) za Safari, VP9 s alfom (.webm) za Chrome/Firefox/Edge.
-const VIDEO_SRC_HEVC = "/hero.mov";
-const VIDEO_SRC_WEBM = "/hero.webm";
+// Single MP4 H.264 sa svakim frejmom kao keyframe — radi u svim browserima
+// (uključujući iOS Safari) i omogućava instant seek za scroll-scrub.
+const VIDEO_SRC = "/hero.mp4";
 
 const PHONE_NUMBER_DISPLAY = "060 660 0868";
 const PHONE_NUMBER_TEL = "+381606600868";
@@ -122,25 +121,23 @@ function App() {
         <div className="mx-auto flex h-full w-full max-w-7xl flex-col items-center justify-center gap-2 px-6 sm:gap-4 md:flex-row md:gap-12 md:px-12 lg:gap-16 lg:px-16">
           {/* Video — first in DOM so it appears ABOVE the text on mobile */}
           <div
-            className="order-1 flex w-full flex-none items-center justify-center md:order-2 md:flex-1"
+            className="order-1 flex h-[50vh] w-full flex-none items-center justify-center md:order-2 md:h-auto md:flex-1"
             data-testid="laptopia-hero-video-col"
           >
             <video
               ref={videoRef}
               data-testid="laptopia-hero-video"
+              src={VIDEO_SRC}
               muted
               playsInline
               preload="auto"
-              className="block h-auto w-full max-h-[42vh] max-w-[420px] object-contain md:max-h-[70vh] md:max-w-[560px]"
-            >
-              <source src={VIDEO_SRC_WEBM} type="video/webm" />
-              <source src={VIDEO_SRC_HEVC} type='video/mp4; codecs="hvc1"' />
-            </video>
+              className="block aspect-square w-full max-h-[42vh] max-w-[360px] object-contain md:max-h-[70vh] md:max-w-[560px]"
+            />
           </div>
 
           {/* Text */}
           <div
-            className="order-2 -mt-2 flex w-full flex-none items-center justify-center md:order-1 md:mt-0 md:h-[70vh] md:flex-1 md:justify-start"
+            className="order-2 flex h-[38vh] w-full flex-none items-start justify-center md:order-1 md:h-[70vh] md:flex-1 md:items-center md:justify-start"
             data-testid="laptopia-hero-text-col"
           >
             <div
@@ -170,17 +167,17 @@ function App() {
                   href={`tel:${PHONE_NUMBER_TEL}`}
                   data-testid="laptopia-cta-call"
                   aria-label={`Pozovite nas na broj ${PHONE_NUMBER_DISPLAY}`}
-                  className="laptopia-cta mt-6 inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium tracking-wide transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98] sm:text-base md:mt-8 md:px-8 md:py-4"
+                  className="laptopia-cta mt-5 inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-medium tracking-wide transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98] sm:text-sm md:mt-6 md:px-5 md:py-2.5"
                   style={{
-                    backgroundColor: "#002f70",
-                    color: "#ffffff",
+                    backgroundColor: "#ffffff",
+                    color: "#002f70",
+                    border: "1.5px solid #002f70",
                     fontFamily: '"Sanchez", serif',
-                    boxShadow: "0 8px 20px rgba(0, 47, 112, 0.25)",
                   }}
                 >
                   <svg
-                    width="18"
-                    height="18"
+                    width="16"
+                    height="16"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -191,7 +188,7 @@ function App() {
                   >
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                   </svg>
-                  Pozovite nas — {PHONE_NUMBER_DISPLAY}
+                  Pozovite nas
                 </a>
               )}
             </div>
