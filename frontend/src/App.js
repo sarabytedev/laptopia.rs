@@ -132,6 +132,7 @@ function App() {
               playsInline
               preload="metadata"
               disablePictureInPicture
+              disableRemotePlayback
               className="block aspect-square w-full max-h-[42vh] max-w-[360px] object-contain md:max-h-[70vh] md:max-w-[560px]"
             />
           </div>
